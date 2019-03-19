@@ -37,11 +37,11 @@ server.get('/api/users/:id', (req, res) => {
     const id = req.params.id;
     db
     .findById(id)
-    .then(id => {
-        if (id) {
-            res.status(200).json(id);
-        } else {
+    .then(user => {
+        if (user.length === 0) {
             res.status(404).json({ message: "The user with the specified ID does not exist." });
+        } else {
+            res.status(200).json(id);
         }
     })
     .catch(err => {
@@ -54,8 +54,8 @@ server.delete('/api/users/:id', (req, res) => {
     
     db
         .remove(id)
-        .then(id => {
-            if (id) {
+        .then(user => {
+            if (user) {
                 res.status(204).end();
             } else {
                 res.status(404).json({ message: "The user with the specified ID does not exist." })
@@ -80,20 +80,39 @@ server.delete('/api/users/:id', (req, res) => {
 server.put('/api/users/:id', (req, res) => {
     const id =req.params.id;
     const changes = req.body;
-
-     db
+    !changes.name || !changes.bio
+    ? res
+        .status(400)
+        .json({ errorMessage: "Please provide name and bio for the user." })
+    : db
         .update(id, changes)
         .then(count => {
-            if (!changes.name || !changes.bio) {
-                res.status(404).json({ errorMessage: "Please provide name and bio for the user." })
-            } else if (count === 0) {
+            if (count === 0) {
                 res.status(404).json({ message: "The user with the specified ID does not exist." })
-            } else {
-                res.status(200).json(updated)
             }
+            db
+                .findById(id)
+                .then(user => {
+                    if (user.length === 0) {
+                        res
+                            .status(404)
+                            .json({ message: "The user with the specified ID could not be located." })
+                    } else {
+                        res
+                            .status(200)
+                            .json(user)
+                    }
+                })
+                .catch(err => {
+                    res
+                        .status(500)
+                        .json({ message: "An error occured while attempting to locate the user."})
+                })
         })
         .catch(err => {
-            res.status(500).json({ error: "The user information could not be modified." })
+            res
+                .status(500)
+                .json({ error: "The user information could not be modified." })
         })
 })
 
